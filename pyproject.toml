@@ -17,7 +17,7 @@ dependencies = [
     "datasette-cron",
     "datasette-vite>=0.0.1a4",
     "datasette-plugin-router>=0.0.1a2",
-    "pydantic>=2",
+    "pydantic>=2.7",  # use_attribute_docstrings
     "sqlite-migrate>=0.1b0",
     "sqlite-utils>=3.38",
     "python-ulid>=4",

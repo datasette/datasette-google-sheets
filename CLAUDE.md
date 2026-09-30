@@ -60,16 +60,20 @@ When stopping dev servers, kill only your own PIDs. Never `pkill -f vite`.
 ```
 datasette_google_sheets/
 ├── __init__.py              # Plugin hooks only
+├── config.py                # Pydantic plugin config (extra="forbid"); get_config(datasette)
 ├── router.py                # Shared Router; every view's request body capped at 16 KB (JSON 413)
 └── routes/
     ├── pages.py             # Page routes (render HTML)
     └── api.py               # JSON API (Pydantic in/out, OpenAPI)
 tests/
+├── test_config.py           # defaults, overrides, unknown keys and bounds → StartupError
 └── test_smoke.py            # google-sheets, google-auth and cron are all registered
 ```
 
 ## Hooks Used
 
+- `startup()` — validates the plugin config; a bad key or value raises `StartupError`
+  naming the field. Read it anywhere with `config.get_config(datasette)`
 - `register_routes()` — registers all routes from the shared router
 - `extra_template_vars()` — `datasette_google_sheets_vite_entry` (datasette-vite; safe
   without a built frontend, it only raises when called with an unknown entrypoint)

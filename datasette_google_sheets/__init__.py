@@ -8,12 +8,20 @@ datasette-cron.
 from datasette import hookimpl
 from datasette_vite import vite_entry
 
+from .config import load_config
 from .router import router
 
 # Import route modules to trigger registration on the shared router
 from .routes import api, pages
 
 _ = (pages, api)
+
+
+@hookimpl
+def startup(datasette):
+    # Validate plugin config first, so a bad config fails startup with a
+    # StartupError naming the bad key.
+    datasette._google_sheets_config = load_config(datasette)
 
 
 @hookimpl
