@@ -1,0 +1,110 @@
+[project]
+name = "datasette-google-sheets"
+version = "0.0.1a0"
+description = "Import Google Sheets into Datasette tables and export tables, views and queries to Google Sheets, one-shot or on a schedule"
+readme = "README.md"
+authors = [{name = "Alex Garcia"}]
+license = "Apache-2.0"
+classifiers=[
+    "Framework :: Datasette"
+]
+requires-python = ">=3.10"
+dependencies = [
+    "datasette>=1.0a41",
+    # Credentials and tokens; public API only (names in its __all__).
+    "datasette-google-auth",
+    # Scheduled links run as cron tasks (D3, D4).
+    "datasette-cron",
+    "datasette-vite>=0.0.1a4",
+    "datasette-plugin-router>=0.0.1a2",
+    "pydantic>=2",
+    "sqlite-migrate>=0.1b0",
+    "sqlite-utils>=3.38",
+    "python-ulid>=4",
+    # Declared explicitly, as google-auth and cron do. The SDK is never
+    # imported by the package (D24).
+    "opentelemetry-api>=1.37",
+]
+
+[dependency-groups]
+dev = [
+    # Actor switcher for `just dev`: installed, so it loads as a plugin.
+    "datasette-debug-gotham>=0.1.0a3",
+    # Hosts the vendored mock Google server in tests (ticket 04).
+    "fastapi",
+    # In-memory tracer/meter providers for the telemetry tests (ticket 19).
+    "opentelemetry-sdk>=1.37",
+    "pytest",
+    "pytest-asyncio",
+    "ruff>=0.15.0",
+    "ty",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+Homepage = "https://github.com/datasette/datasette-google-sheets"
+Changelog = "https://github.com/datasette/datasette-google-sheets/releases"
+Issues = "https://github.com/datasette/datasette-google-sheets/issues"
+CI = "https://github.com/datasette/datasette-google-sheets/actions"
+
+[project.entry-points.datasette]
+google_sheets = "datasette_google_sheets"
+
+# Editable, path-based sibling checkouts. uv sources are not transitive, so
+# google-auth's own acl and acl-share sources are repeated here.
+# - ../datasette-cron must be on branch `otel` (unreleased; as datasette-alerts).
+# - ../datasette-acl must be on a branch that has the datasette_acl.grants
+#   Principal API (`grant(..., principal=Principal.actor(id), role=...)`):
+#   `main` has it and `grant-event` adds parent-only grants and acl-grant
+#   events on top. The PyPI 0.6a1 release does not.
+# The editable installs track the working trees, so a `git checkout` in a
+# sibling changes what we develop against.
+[tool.uv.sources]
+datasette-google-auth = { path = "../datasette-google-auth", editable = true }
+datasette-cron = { path = "../datasette-cron", editable = true }
+datasette-acl = { path = "../datasette-acl", editable = true }
+datasette-acl-share = { path = "../datasette-acl-share", editable = true }
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+# tests/live/ talks to real Google: never collected by a plain `pytest` /
+# `just test`, only when named (`just test-live`). The rest are pytest's
+# defaults, which this setting replaces.
+norecursedirs = ["*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}", "live"]
+markers = [
+    "live: calls real Google; opt-in via `just test-live` (Alex runs it, never agents)",
+]
+
+[tool.setuptools.package-data]
+datasette_google_sheets = ["static/**/*", "templates/*", "manifest.json"]
+
+[tool.setuptools.packages.find]
+# Whitelist the package we ship (see datasette-cron: an exclude-based list
+# lets setuptools recurse into build/lib/ from earlier builds).
+include = ["datasette_google_sheets*"]
+
+[tool.ty.src]
+exclude = ["tests/", "frontend/"]
+
+# The editable path sources above install through a setuptools import-hook
+# finder, which ty can't follow; point it at the same checkouts.
+[tool.ty.environment]
+extra-paths = [
+    "../datasette-google-auth",
+    "../datasette-cron",
+    "../datasette-acl",
+    "../datasette-acl-share",
+]
+
+# Keep the formatter out of Markdown (ruff 0.16 formats code blocks in .md).
+[tool.ruff.format]
+exclude = ["*.md"]
+
+# Explicit select rather than extend-select, so a floor-only ruff pin gives
+# every checkout the same idea of "clean".
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
