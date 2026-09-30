@@ -6,6 +6,13 @@ Every view it hands to Datasette caps the request body at
 are small. datasette-plugin-router reads and parses a ``Body()`` before the
 handler runs, so the cap has to wrap the router's view rather than live in a
 handler. Copied from datasette-google-auth's ``router.py``.
+
+It also enforces each route's HTTP method, which neither Datasette (the
+first matching path wins, ``utils.resolve_routes``) nor the plugin router
+checks. So ``GET`` and ``POST`` can share a path (``/api/links``), and a
+POST-only mutation is never reachable by ``GET``, which core's CSRF check
+(unsafe methods only) would let through cross-site. A wrong method gets a
+JSON 405.
 """
 
 from __future__ import annotations
@@ -49,11 +56,62 @@ def limit_body(view: Callable[..., Any]) -> Callable[..., Any]:
     return limited
 
 
+def _method_not_allowed(allowed: list[str]) -> Response:
+    return Response.json(
+        {
+            "ok": False,
+            "error": f"Method not allowed (use {', '.join(allowed)})",
+            "code": "method_not_allowed",
+        },
+        status=405,
+        headers={"Allow": ", ".join(allowed)},
+    )
+
+
+def dispatch(views: dict[str, Callable[..., Any]]) -> Callable[..., Any]:
+    """One view for a path: the view registered for the request's method
+    (``HEAD`` counts as ``GET``), else a 405."""
+    allowed = sorted(views)
+
+    async def by_method(request, datasette=None, scope=None, receive=None, send=None):
+        method = "GET" if request.method == "HEAD" else request.method
+        view = views.get(method)
+        if view is None:
+            return _method_not_allowed(allowed)
+        return await view(
+            request, datasette=datasette, scope=scope, receive=receive, send=send
+        )
+
+    return by_method
+
+
 class GoogleSheetsRouter(Router):
-    """A ``Router`` whose views all go through ``limit_body``."""
+    """A ``Router`` whose views check their method and go through
+    ``limit_body``."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._methods: dict[Callable[..., Any], str] = {}
+
+    def GET(self, path: str, *, output: type | None = None):
+        return self._record("GET", super().GET(path, output=output))
+
+    def POST(self, path: str, *, output: type | None = None):
+        return self._record("POST", super().POST(path, output=output))
+
+    def _record(self, method: str, decorator: Callable[..., Any]):
+        def register(fn: Callable[..., Any]) -> Callable[..., Any]:
+            view = decorator(fn)
+            self._methods[view] = method
+            return view
+
+        return register
 
     def routes(self) -> list[tuple[str, Callable[..., Any]]]:
-        return [(path, limit_body(view)) for path, view in super().routes()]
+        by_path: dict[str, dict[str, Callable[..., Any]]] = {}
+        for path, view in super().routes():
+            by_path.setdefault(path, {})[self._methods[view]] = view
+        return [(path, limit_body(dispatch(views))) for path, views in by_path.items()]
 
 
 # The one Router every module in routes/ registers on.

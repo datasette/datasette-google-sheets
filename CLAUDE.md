@@ -49,6 +49,7 @@ Always go through `just`.
 | `just check` | ty + ruff lint + ruff format check + svelte-check (skipped until `frontend/` exists) |
 | `just test` | Python tests (pytest, asyncio strict); never collects `tests/live/` |
 | `just clean-dev` | Delete `.tmp/` (dev databases) |
+| `just openapi` | Print the JSON API's OpenAPI document (`types-routes` / `api.d.ts` land with `frontend/`, ticket 14) |
 
 Later tickets add `just types`, `types-check-fresh`, `openapi`, `shots`, `telemetry-doc`
 and `test-live`. **Agents never run `just test-live`** (Alex does).
@@ -66,10 +67,12 @@ datasette_google_sheets/
 ├── internal_migrations.py   # sqlite-migrate schema: links + runs tables (append-only)
 ├── internal_db.py           # InternalDB: typed Link / Run rows, link CRUD, run history + pruning
 ├── lock.py                  # D7 synced-table lock: table-level deny SQL over the links table (no cache)
+├── models.py                # JSON API request/response models (the OpenAPI contract; pages reuse them)
 ├── permissions.py           # D15 actions + can_schedule / is_admin / can_{view,manage,operate}_link
 ├── router.py                # Shared Router; every view's request body capped at 16 KB (JSON 413)
 ├── runner.py                # run_link(): acting actor (D5), permission checks, run history, status + auto-pause (D17)
 ├── schedule.py              # Cron tasks per link (D4): handler, sync_task, startup reconcile, interval/persistent-DB/permission helpers
+├── service.py               # Link operations behind the API: owner/admin rules, 404 equalisation, validations, ApiError
 ├── sheets.py                # Thin Sheets client over cred.request(); SheetsError keeps Google's reason
 └── routes/
     ├── pages.py             # Page routes (render HTML)
@@ -78,6 +81,7 @@ tests/
 ├── mock_google/             # Vendored from google-auth @ a2f4eee, Sheets extended (D22)
 ├── conftest.py              # Network block + fixture imports
 ├── fixtures_*.py            # google (vendored), sheets, import, export fixtures
+├── test_api.py              # JSON API: auth, owner/admin/404 rules, create validations, lifecycle, OpenAPI
 ├── test_config.py           # defaults, overrides, unknown keys and bounds → StartupError
 ├── test_exporter.py         # sources, caps, truncation, modes, partial writes
 ├── test_importer.py         # modes, strict headers, keys, hash skip, atomicity
@@ -139,6 +143,11 @@ tests/
 
 - **`__init__.py` is hooks only.** Logic goes in its own module.
 - **`datasette.allowed(...)` is keyword-only.**
+- **JSON API** (`/-/google-sheets/api/...`): every route needs a signed-in actor (403
+  `not_signed_in`); errors are `{ok: false, error, code, ...}`; someone else's link is the
+  same 404 as an unknown id, and admins get 403 on run/settings/mapping/convert (D15).
+  The router enforces each route's method (JSON 405), so a POST-only mutation is never
+  reachable by GET. Every link mutation ends with `schedule.sync_task`.
 - **No `from __future__ import annotations` in `routes/`**: datasette-plugin-router reads real
   annotation objects (`Annotated[Model, Body()]`, `str` path params); string annotations silently
   drop the request body and path params.

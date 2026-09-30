@@ -20,6 +20,16 @@ frontend-format:
 frontend-format-check:
   npm run format:check --prefix frontend
 
+# === Type Generation ===
+# Print the JSON API's OpenAPI document (from the router's Pydantic models).
+# Importing the router imports the package, which registers every route.
+# `types-routes` (frontend/api.d.ts via openapi-typescript), `types` and
+# `types-check-fresh` arrive with frontend/ in ticket 14: until then there is
+# no package.json to pin openapi-typescript, and a frontend/ directory would
+# switch on the frontend steps of `format` and `check`.
+openapi:
+  @uv run python -c 'from datasette_google_sheets.router import router; import json; print(json.dumps(router.openapi_document_json(), indent=2))'
+
 # === Formatting ===
 # The frontend steps are skipped until frontend/ exists (ticket 14).
 
