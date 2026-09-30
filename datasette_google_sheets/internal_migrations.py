@@ -62,10 +62,12 @@ def m001_links_and_runs(db: Database):
             ON datasette_google_sheets_links(owner_id);
         CREATE INDEX IF NOT EXISTS datasette_google_sheets_links_table
             ON datasette_google_sheets_links(database_name, table_name);
-        -- At most one export link per tab (D14).
+        -- At most one export link per tab (D14). A new-spreadsheet export
+        -- waiting for its first run has spreadsheet_id '' (D33), so any number
+        -- of those may coexist.
         CREATE UNIQUE INDEX IF NOT EXISTS datasette_google_sheets_links_export_tab
             ON datasette_google_sheets_links(spreadsheet_id, sheet_gid)
-            WHERE direction = 'export';
+            WHERE direction = 'export' AND spreadsheet_id != '';
         -- A table has at most one sync (D8).
         CREATE UNIQUE INDEX IF NOT EXISTS datasette_google_sheets_links_sync_table
             ON datasette_google_sheets_links(database_name, table_name)

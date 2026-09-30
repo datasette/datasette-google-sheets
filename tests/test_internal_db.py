@@ -359,6 +359,48 @@ async def test_unique_indexes_hold_without_the_python_check(
 
 
 @pytest.mark.asyncio
+async def test_pending_new_spreadsheet_exports_coexist(idb: InternalDB):
+    """D33: spreadsheet_id '' marks a new-spreadsheet export before its first
+    run. It holds no tab, so several can exist at once."""
+    first = await export_link(idb, mode="new", spreadsheet_id="")
+    second = await export_link(idb, mode="new", spreadsheet_id="", table_name="t2")
+    assert {link.id for link in await idb.list_links()} == {first.id, second.id}
+    # Once created, the spreadsheet's tab is taken like any other.
+    await idb.update_link(first.id, spreadsheet_id="created", sheet_gid=0)
+    with pytest.raises(ExportTabTaken) as info:
+        await idb.update_link(second.id, spreadsheet_id="created", sheet_gid=0)
+    assert info.value.existing_id == first.id
+
+
+@pytest.mark.asyncio
+async def test_export_tab_index_skips_only_pending_new_spreadsheets(
+    ds: Datasette, idb: InternalDB
+):
+    """The partial unique index, without the Python pre-check: '' rows may
+    repeat, real (spreadsheet_id, sheet_gid) pairs may not."""
+    pending = await export_link(idb, mode="new", spreadsheet_id="")
+    real = await export_link(idb)
+
+    def duplicate(conn, source_id, new_id):
+        conn.execute(
+            f"INSERT INTO {LINKS} SELECT ? AS id, direction, mode, owner_id,"
+            " credential_id, database_name, table_name, source_kind, query_name,"
+            " sql, params, spreadsheet_id, sheet_gid, spreadsheet_title,"
+            " sheet_title, mapping, options, interval_minutes, created_table,"
+            " created_schema, enabled, status, status_code, status_detail,"
+            " status_data, consecutive_failures, last_run_at, last_success_at,"
+            f" last_hash, created_at, updated_at FROM {LINKS} WHERE id = ?",
+            [new_id, source_id],
+        )
+
+    db = ds.get_internal_database()
+    await db.execute_write_fn(lambda conn: duplicate(conn, pending.id, "dup-pending"))
+    assert await idb.get_link("dup-pending") is not None
+    with pytest.raises(sqlite3.IntegrityError):
+        await db.execute_write_fn(lambda conn: duplicate(conn, real.id, "dup-real"))
+
+
+@pytest.mark.asyncio
 async def test_scheduled_links_includes_disabled(idb: InternalDB):
     await import_link(idb)
     synced = await import_link(idb, table_name="t2", interval_minutes=10)

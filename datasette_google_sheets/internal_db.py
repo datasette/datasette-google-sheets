@@ -266,7 +266,9 @@ def _link_values(link: Link) -> dict[str, Any]:
 def _check_conflicts(conn: sqlite3.Connection, link: Link) -> None:
     """Raise a ``LinkConflict`` before the unique indexes would. Runs inside
     the write transaction (BEGIN IMMEDIATE), so it can't race another write."""
-    if link.direction == "export":
+    # spreadsheet_id '' is a new-spreadsheet export before its first run
+    # (D33): it has no tab yet, so it can't take one.
+    if link.direction == "export" and link.spreadsheet_id != "":
         row = conn.execute(
             f"SELECT id FROM {LINKS} WHERE direction = 'export'"
             " AND spreadsheet_id = ? AND sheet_gid = ? AND id != ?",
