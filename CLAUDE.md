@@ -68,6 +68,7 @@ datasette_google_sheets/
 ├── permissions.py           # D15 actions + can_schedule / is_admin / can_{view,manage,operate}_link
 ├── router.py                # Shared Router; every view's request body capped at 16 KB (JSON 413)
 ├── runner.py                # run_link(): acting actor (D5), permission checks, run history, status + auto-pause (D17)
+├── schedule.py              # Cron tasks per link (D4): handler, sync_task, startup reconcile, interval/persistent-DB/permission helpers
 ├── sheets.py                # Thin Sheets client over cred.request(); SheetsError keeps Google's reason
 └── routes/
     ├── pages.py             # Page routes (render HTML)
@@ -83,6 +84,7 @@ tests/
 ├── test_mock_google.py      # the mock's Sheets endpoints and error shapes
 ├── test_permissions.py      # actions default-deny, config grants, link helper truth table
 ├── test_runner.py           # acting actor, permissions (synced → database level), pause/error/retry, lock
+├── test_schedule.py         # handler ref, task spec, sync/reconcile, startup ordering, floor clamp, helpers, e2e via cron
 ├── test_sheets.py           # URL parsing, client calls, error classification
 └── test_smoke.py            # google-sheets, google-auth and cron are all registered
 ```
@@ -91,7 +93,13 @@ tests/
 
 - `startup()` — validates the plugin config; a bad key or value raises `StartupError`
   naming the field. Read it anywhere with `config.get_config(datasette)`. Then applies the
-  internal-DB migrations and marks runs a crashed process left `running` as `abandoned` errors
+  internal-DB migrations and marks runs a crashed process left `running` as `abandoned` errors.
+  Last, `schedule.start()`: wires the runner's auto-pause to cron's `set_enabled(task, False)`
+  and reconciles cron's `google-sheets:*` tasks with the scheduled links (D4). Runs after
+  datasette-cron's `tryfirst` startup (so `datasette._cron_scheduler` exists; missing →
+  `StartupError`) and before cron's loop launches
+- `cron_register_handlers()` (datasette-cron) — `{"run-link": ...}`, registered by cron as
+  `google_sheets:run-link`; runs the link as scheduled, removes the task of a link that's gone
 - `register_actions()` — `google-sheets-schedule` and `google-sheets-admin`, both global and
   default deny (D15). Links are owner-only, checked in code (`permissions.py`), never `allowed()`
 - `register_routes()` — registers all routes from the shared router

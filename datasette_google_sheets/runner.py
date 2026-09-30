@@ -18,9 +18,9 @@ auto-pause (D5, D17, D19).
 Our own table writes never go through ``allowed()`` (D7): the owner's
 permissions are checked here, before the engine writes.
 
-Pausing calls the hook set with ``set_on_paused()``: ticket 10 wires it to
-cron's ``set_enabled(task, False)``. Until then it's a no-op, so this module
-doesn't depend on cron.
+Pausing calls the hook set with ``set_on_paused()``: ``schedule.start()``
+wires it to cron's ``set_enabled(task, False)`` at startup (a no-op until
+then), so this module doesn't depend on cron.
 
 Messages and ``status_detail`` are for the link's owner: they may name the
 sheet, tab, table or the service account's email, never cell values. Logs

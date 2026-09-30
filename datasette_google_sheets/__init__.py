@@ -6,6 +6,7 @@ datasette-cron.
 """
 
 from datasette import hookimpl
+from datasette.utils import StartupError
 from datasette_vite import vite_entry
 from sqlite_utils import Database as SqliteUtilsDatabase
 
@@ -17,6 +18,8 @@ from .router import router
 
 # Import route modules to trigger registration on the shared router
 from .routes import api, pages
+from .schedule import cron_handlers
+from .schedule import start as start_schedules
 
 _ = (pages, api)
 
@@ -38,8 +41,22 @@ def startup(datasette):
         # Runs left "running" by a crashed process become errors. Safe here:
         # nothing can be running before every startup hook has finished.
         await InternalDB.for_datasette(datasette).mark_abandoned_runs()
+        # datasette-cron's startup is tryfirst and has finished by now, so
+        # its scheduler exists; its loop starts only after every startup
+        # hook, so the reconciled tasks are in place before its first tick.
+        if getattr(datasette, "_cron_scheduler", None) is None:
+            raise StartupError(
+                "datasette-google-sheets needs the datasette-cron plugin loaded"
+            )
+        await start_schedules(datasette)
 
     return inner
+
+
+@hookimpl
+def cron_register_handlers(datasette):
+    # Registered by cron as google_sheets:run-link.
+    return cron_handlers()
 
 
 @hookimpl
