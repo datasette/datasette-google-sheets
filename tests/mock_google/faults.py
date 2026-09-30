@@ -4,6 +4,7 @@
     mock_google.faults.fail("/v4/spreadsheets/", 401, times=1) # one 401, then OK
     mock_google.faults.fail("/token", 503, times=None)         # always
     mock_google.faults.fail("/v4/", reason="SERVICE_DISABLED") # 403 + ErrorInfo
+    mock_google.faults.fail("/v4/", 500, after=2)              # 2 succeed, then 500
 
 ``path`` is a prefix of the request path; ``method`` optionally narrows it.
 A matching request is still recorded in the request log, with the injected
@@ -35,6 +36,7 @@ class _Rule:
     injected: Injected
     remaining: int | None  # None = forever
     method: str | None
+    after: int = 0  # matching requests to let through first
 
 
 class Faults:
@@ -51,11 +53,13 @@ class Faults:
         reason: str | None = None,
         times: int | None = 1,
         method: str | None = None,
+        after: int = 0,
     ) -> None:
         """Answer the next ``times`` matching requests (``None`` = all) with
         ``status``, or with the documented error for ErrorInfo ``reason``
         (``SERVICE_DISABLED``, ``ACCESS_TOKEN_SCOPE_INSUFFICIENT``,
-        ``RATE_LIMIT_EXCEEDED``)."""
+        ``RATE_LIMIT_EXCEEDED``). ``after`` lets that many matching requests
+        through first (a failure part-way through a chunked append)."""
         if reason is not None:
             if reason not in REASON_ERRORS:
                 raise ValueError(f"unknown reason {reason!r}")
@@ -72,6 +76,7 @@ class Faults:
                     Injected(status, reason),
                     times,
                     method.upper() if method else None,
+                    after,
                 )
             )
 
@@ -86,6 +91,9 @@ class Faults:
                 if not path.startswith(rule.path):
                     continue
                 if rule.method is not None and rule.method != method:
+                    continue
+                if rule.after:
+                    rule.after -= 1
                     continue
                 if rule.remaining is not None:
                     rule.remaining -= 1

@@ -15,7 +15,9 @@ upstream). Local changes since a2f4eee:
   fixture helpers on ``SpreadsheetStore``.
 - errors.py / faults.py: documented Google error bodies with ErrorInfo
   reasons (``SERVICE_DISABLED``, ``ACCESS_TOKEN_SCOPE_INSUFFICIENT``,
-  ``RATE_LIMIT_EXCEEDED``), injectable via ``faults.fail(..., reason=)``.
+  ``RATE_LIMIT_EXCEEDED``), injectable via ``faults.fail(..., reason=)``;
+  ``faults.fail(..., after=N)`` lets N matching requests through first
+  (ticket 05's partial-append test).
 - fixtures_google.py: no ``datasette_google_auth.config`` import.
 
 Served by FastAPI and mounted with ``httpx2.ASGITransport`` (see
