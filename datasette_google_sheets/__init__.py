@@ -13,6 +13,7 @@ from sqlite_utils import Database as SqliteUtilsDatabase
 from .config import load_config
 from .internal_db import InternalDB
 from .internal_migrations import internal_migrations
+from .lock import synced_table_deny
 from .permissions import actions
 from .router import router
 
@@ -78,3 +79,9 @@ def extra_template_vars(datasette):
         plugin_package="datasette_google_sheets",
     )
     return {"datasette_google_sheets_vite_entry": entry}
+
+
+@hookimpl
+def permission_resources_sql(datasette, actor, action):
+    # Synced tables are read-only for every actor, root included (D7).
+    return synced_table_deny(datasette, action)

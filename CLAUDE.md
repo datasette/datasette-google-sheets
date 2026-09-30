@@ -65,6 +65,7 @@ datasette_google_sheets/
 ├── importer.py              # Import runner: size cap → fetch → strict headers → mapping → hash → one-txn write
 ├── internal_migrations.py   # sqlite-migrate schema: links + runs tables (append-only)
 ├── internal_db.py           # InternalDB: typed Link / Run rows, link CRUD, run history + pruning
+├── lock.py                  # D7 synced-table lock: table-level deny SQL over the links table (no cache)
 ├── permissions.py           # D15 actions + can_schedule / is_admin / can_{view,manage,operate}_link
 ├── router.py                # Shared Router; every view's request body capped at 16 KB (JSON 413)
 ├── runner.py                # run_link(): acting actor (D5), permission checks, run history, status + auto-pause (D17)
@@ -81,6 +82,7 @@ tests/
 ├── test_exporter.py         # sources, caps, truncation, modes, partial writes
 ├── test_importer.py         # modes, strict headers, keys, hash skip, atomicity
 ├── test_internal_db.py      # migrations, link CRUD, unique tab/sync, run pruning, abandoned runs
+├── test_lock.py             # synced-table deny beats root/config allows; JSON API, write SQL, edit UI; sync still writes; unlink
 ├── test_mock_google.py      # the mock's Sheets endpoints and error shapes
 ├── test_permissions.py      # actions default-deny, config grants, link helper truth table
 ├── test_runner.py           # acting actor, permissions (synced → database level), pause/error/retry, lock
@@ -103,6 +105,11 @@ tests/
 - `register_actions()` — `google-sheets-schedule` and `google-sheets-admin`, both global and
   default deny (D15). Links are owner-only, checked in code (`permissions.py`), never `allowed()`
 - `register_routes()` — registers all routes from the shared router
+- `permission_resources_sql()` — for `insert-row`, `update-row`, `delete-row`, `alter-table`,
+  `drop-table` and `set-column-type`, a table-level deny (every actor, root included) of every
+  synced table (D7), selected straight from the links table: core runs plugin permission SQL
+  against the internal DB. Paused syncs stay locked; unlink (clearing `interval_minutes`) lifts
+  it on the next check. Returns nothing until our startup has created the table
 - `extra_template_vars()` — `datasette_google_sheets_vite_entry` (datasette-vite; safe
   without a built frontend, it only raises when called with an unknown entrypoint)
 
