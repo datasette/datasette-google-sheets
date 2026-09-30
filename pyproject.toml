@@ -19,7 +19,7 @@ dependencies = [
     "datasette-plugin-router>=0.0.1a2",
     "pydantic>=2.7",  # use_attribute_docstrings
     "sqlite-migrate>=0.1b0",
-    "sqlite-utils>=3.38",
+    "sqlite-utils>=4",  # atomic() nests as a savepoint in our transaction
     "python-ulid>=4",
     # Declared explicitly, as google-auth and cron do. The SDK is never
     # imported by the package (D24).
