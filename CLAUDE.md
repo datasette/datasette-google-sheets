@@ -67,6 +67,7 @@ datasette_google_sheets/
 ├── internal_db.py           # InternalDB: typed Link / Run rows, link CRUD, run history + pruning
 ├── permissions.py           # D15 actions + can_schedule / is_admin / can_{view,manage,operate}_link
 ├── router.py                # Shared Router; every view's request body capped at 16 KB (JSON 413)
+├── runner.py                # run_link(): acting actor (D5), permission checks, run history, status + auto-pause (D17)
 ├── sheets.py                # Thin Sheets client over cred.request(); SheetsError keeps Google's reason
 └── routes/
     ├── pages.py             # Page routes (render HTML)
@@ -81,6 +82,7 @@ tests/
 ├── test_internal_db.py      # migrations, link CRUD, unique tab/sync, run pruning, abandoned runs
 ├── test_mock_google.py      # the mock's Sheets endpoints and error shapes
 ├── test_permissions.py      # actions default-deny, config grants, link helper truth table
+├── test_runner.py           # acting actor, permissions (synced → database level), pause/error/retry, lock
 ├── test_sheets.py           # URL parsing, client calls, error classification
 └── test_smoke.py            # google-sheets, google-auth and cron are all registered
 ```
