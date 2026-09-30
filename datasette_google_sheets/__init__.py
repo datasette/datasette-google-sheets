@@ -9,6 +9,7 @@ from datasette import hookimpl
 from datasette_vite import vite_entry
 
 from .config import load_config
+from .permissions import actions
 from .router import router
 
 # Import route modules to trigger registration on the shared router
@@ -22,6 +23,11 @@ def startup(datasette):
     # Validate plugin config first, so a bad config fails startup with a
     # StartupError naming the bad key.
     datasette._google_sheets_config = load_config(datasette)
+
+
+@hookimpl
+def register_actions(datasette):
+    return actions()
 
 
 @hookimpl
