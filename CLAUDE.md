@@ -61,6 +61,8 @@ When stopping dev servers, kill only your own PIDs. Never `pkill -f vite`.
 datasette_google_sheets/
 ├── __init__.py              # Plugin hooks only
 ├── config.py                # Pydantic plugin config (extra="forbid"); get_config(datasette)
+├── internal_migrations.py   # sqlite-migrate schema: links + runs tables (append-only)
+├── internal_db.py           # InternalDB: typed Link / Run rows, link CRUD, run history + pruning
 ├── permissions.py           # D15 actions + can_schedule / is_admin / can_{view,manage,operate}_link
 ├── router.py                # Shared Router; every view's request body capped at 16 KB (JSON 413)
 └── routes/
@@ -68,6 +70,7 @@ datasette_google_sheets/
     └── api.py               # JSON API (Pydantic in/out, OpenAPI)
 tests/
 ├── test_config.py           # defaults, overrides, unknown keys and bounds → StartupError
+├── test_internal_db.py       # migrations, link CRUD, unique tab/sync, run pruning, abandoned runs
 ├── test_permissions.py      # actions default-deny, config grants, link helper truth table
 └── test_smoke.py            # google-sheets, google-auth and cron are all registered
 ```
@@ -75,7 +78,8 @@ tests/
 ## Hooks Used
 
 - `startup()` — validates the plugin config; a bad key or value raises `StartupError`
-  naming the field. Read it anywhere with `config.get_config(datasette)`
+  naming the field. Read it anywhere with `config.get_config(datasette)`. Then applies the
+  internal-DB migrations and marks runs a crashed process left `running` as `abandoned` errors
 - `register_actions()` — `google-sheets-schedule` and `google-sheets-admin`, both global and
   default deny (D15). Links are owner-only, checked in code (`permissions.py`), never `allowed()`
 - `register_routes()` — registers all routes from the shared router
@@ -115,7 +119,7 @@ tests/
 - `@dataclass` is fine in the package.
 - **Svelte 5 runes**: `$state()`, `$derived()`, `$effect()`, `$props()`
 - **IDs**: `python-ulid`
-- **Internal DB reads**: use `execute_write_fn()` even for reads
+- **Internal DB access**: reads use `db.execute()`; writes use `execute_write_fn()` with named functions
 - **Template**: one template for all pages; routes vary `entrypoint` and `page_data`
 - **Tests**: `asyncio_mode = "strict"`; async tests use `@pytest.mark.asyncio`, async
   fixtures `@pytest_asyncio.fixture`; shared fixtures in `tests/conftest.py` or `tests/fixtures_*.py`.

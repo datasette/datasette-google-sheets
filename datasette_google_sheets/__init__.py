@@ -7,8 +7,11 @@ datasette-cron.
 
 from datasette import hookimpl
 from datasette_vite import vite_entry
+from sqlite_utils import Database as SqliteUtilsDatabase
 
 from .config import load_config
+from .internal_db import InternalDB
+from .internal_migrations import internal_migrations
 from .permissions import actions
 from .router import router
 
@@ -20,9 +23,23 @@ _ = (pages, api)
 
 @hookimpl
 def startup(datasette):
-    # Validate plugin config first, so a bad config fails startup with a
-    # StartupError naming the bad key.
-    datasette._google_sheets_config = load_config(datasette)
+    async def inner():
+        # Validate plugin config first, so a bad config fails startup (with a
+        # StartupError naming the bad key) before anything touches the
+        # internal database.
+        datasette._google_sheets_config = load_config(datasette)
+
+        def apply_google_sheets_migrations(connection):
+            internal_migrations.apply(SqliteUtilsDatabase(connection))
+
+        await datasette.get_internal_database().execute_write_fn(
+            apply_google_sheets_migrations
+        )
+        # Runs left "running" by a crashed process become errors. Safe here:
+        # nothing can be running before every startup hook has finished.
+        await InternalDB.for_datasette(datasette).mark_abandoned_runs()
+
+    return inner
 
 
 @hookimpl
