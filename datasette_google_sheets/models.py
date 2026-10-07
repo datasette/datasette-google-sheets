@@ -40,7 +40,7 @@ class StatusResponse(BaseModel):
     internal_db_persistent: bool
     """False without ``--internal``: scheduled links are refused (D19)."""
     oauth_configured: bool | None
-    """Whether google-auth can "Connect Google". None = unknown (google-auth
+    """Whether google-credentials can "Connect Google". None = unknown (google-credentials
     doesn't export ``oauth_configured`` yet, D21): show Connect Google."""
     can_schedule: bool
     """Holds ``google-sheets-schedule`` (D15)."""
@@ -66,7 +66,7 @@ class CredentialOption(BaseModel):
 class CredentialsResponse(BaseModel):
     credentials: list[CredentialOption]
     connect_url: str
-    """Starts google-auth's "Connect Google", coming back to ``return_to``."""
+    """Starts google-credentials's "Connect Google", coming back to ``return_to``."""
 
 
 class TabInfo(BaseModel):

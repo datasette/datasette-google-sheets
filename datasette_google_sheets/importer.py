@@ -12,11 +12,11 @@ the link. Our writes never call ``allowed()`` (D7). ``actor`` is used only
 to attribute the core events.
 
 Failures raise ``ImporterError`` with a stable ``code``. ``SheetsError``
-(``sheets.py``) and google-auth's ``GoogleAuthError`` pass through
+(``sheets.py``) and google-credentials's ``GoogleCredentialsError`` pass through
 unchanged. Messages and ``data`` are for the link's owner: they may name the
 table and its columns, never cell values. Nothing here logs.
 
-Header normalisation and the records rule come from datasette-google-auth's
+Header normalisation and the records rule come from datasette-google-credentials's
 ``samples/google_sheets_import.py``.
 """
 
@@ -46,7 +46,7 @@ from .sheets import Tab, find_tab, get_tabs, get_values
 
 if TYPE_CHECKING:
     from datasette.app import Datasette
-    from datasette_google_auth import Credential
+    from datasette_google_credentials import Credential
 
 ImporterErrorCode = Literal[
     "database_missing",
@@ -709,7 +709,7 @@ async def run_import(
 
     ``actor`` (the acting actor, D5) is only the core events' actor. With
     ``force``, an unchanged sheet is written anyway (D12's "Force full
-    sync"). Raises ``ImporterError``, ``SheetsError`` or ``GoogleAuthError``.
+    sync"). Raises ``ImporterError``, ``SheetsError`` or ``GoogleCredentialsError``.
     """
     mapping = link.mapping
     if link.direction != "import" or mapping is None or not link.table_name:

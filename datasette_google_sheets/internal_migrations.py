@@ -30,7 +30,7 @@ def m001_links_and_runs(db: Database):
             direction            TEXT NOT NULL,     -- import | export
             mode                 TEXT NOT NULL,     -- D8, D14
             owner_id             TEXT NOT NULL,
-            credential_id        TEXT NOT NULL,     -- google-auth credential id
+            credential_id        TEXT NOT NULL,     -- google-credentials credential id
             database_name        TEXT NOT NULL,
             table_name           TEXT,              -- import target, or export table/view
             source_kind          TEXT,              -- exports: table|view|query|sql

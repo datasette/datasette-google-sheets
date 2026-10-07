@@ -1,0 +1,34 @@
+{#- The top_table banner (banner.py). No JS. `banner.details` is only set
+    for the link's owner and google-sheets-admin actors (D15). -#}
+{%- set d = banner.details -%}
+{%- macro sheet_link() -%}
+  {%- set name = d.spreadsheet_title or "the spreadsheet" -%}
+  {%- if d.sheet_title %}{% set name = name ~ " › " ~ d.sheet_title %}{% endif -%}
+  {%- if d.spreadsheet_url -%}
+    <a href="{{ d.spreadsheet_url }}" rel="noopener noreferrer" target="_blank">{{ name }}</a>
+  {%- else -%}
+    {{ name }}
+  {%- endif -%}
+{%- endmacro -%}
+{%- if banner.kind == "synced" %}
+<div class="{% if banner.paused or (d and d.failing) %}message-warning{% else %}message-info{% endif %} google-sheets-banner">
+  <p>
+    {%- if banner.paused %}<strong>⚠ Sync paused</strong> · {% endif -%}
+    Synced from Google Sheets · every {{ banner.interval_minutes }} min · {% if banner.last_synced -%}
+      last synced <time datetime="{{ banner.last_synced.iso }}" title="{{ banner.last_synced.iso }}">{{ banner.last_synced.ago }}</time>
+    {%- else -%}
+      not synced yet
+    {%- endif %} · read-only in Datasette</p>
+  {%- if d %}
+  <p>
+    From {{ sheet_link() }}
+    {%- if d.reason %}<br>{% if banner.paused %}Paused{% else %}Last sync failed, retrying on schedule{% endif %}: {{ d.reason }}{% endif %}
+  </p>
+  <p><a href="{{ d.detail_url }}">Sync now</a> · <a href="{{ d.detail_url }}">Unlink</a> · <a href="{{ d.detail_url }}">Link details</a></p>
+  {%- endif %}
+</div>
+{%- elif banner.kind == "imported" %}
+<div class="message-info google-sheets-banner">
+  <p>Imported from {{ sheet_link() }} on <time datetime="{{ banner.imported_at.iso }}" title="{{ banner.imported_at.iso }}">{{ banner.imported_at.date }}</time> · <a href="{{ d.detail_url }}">Link details</a></p>
+</div>
+{%- endif %}

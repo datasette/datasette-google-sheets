@@ -1,6 +1,6 @@
 """Mock Google fixtures, shared by the whole suite (imported by conftest.py).
 
-Vendored from datasette-google-auth @ a2f4eee (see mock_google/__init__.py).
+Vendored from datasette-google-credentials @ a2f4eee (see mock_google/__init__.py).
 A Datasette with this plugin too, and credential helpers: fixtures_sheets.py.
 
     async def test_something(mock_google):
@@ -33,17 +33,17 @@ import httpx2
 import pytest
 from datasette.app import Datasette
 
-# The ONE non-public google-auth import in this repo, test-only. There is no
-# public way to route google-auth's outbound HTTP to an in-process transport
-# until `datasette_google_auth.testing` exists (D22; upstream ticket
+# The ONE non-public google-credentials import in this repo, test-only. There is no
+# public way to route google-credentials's outbound HTTP to an in-process transport
+# until `datasette_google_credentials.testing` exists (D22; upstream ticket
 # sheets-consumer/03). Nothing under datasette_google_sheets/ may do this.
-from datasette_google_auth.http import set_transport
+from datasette_google_credentials.http import set_transport
 from mock_google import MOCK_BASE, SHEETS_BASE
 from mock_google.app import MockState, create_app
 from mock_google.keys import ServiceAccountKey, fixture_service_accounts
 from mock_google.oauth import OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET
 
-PLUGIN_NAME = "datasette-google-auth"
+PLUGIN_NAME = "datasette-google-credentials"
 
 GOOGLE_BASE_URLS = {
     "oauth_authorize": f"{MOCK_BASE}/o/oauth2/v2/auth",
@@ -143,7 +143,7 @@ class MockGoogle:
         return self.state.calls(path, **filters)
 
     def plugin_config(self, **overrides: Any) -> dict[str, Any]:
-        """``datasette-google-auth`` plugin config pointing at the mock."""
+        """``datasette-google-credentials`` plugin config pointing at the mock."""
         config: dict[str, Any] = {
             "client_id": OAUTH_CLIENT_ID,
             "client_secret": OAUTH_CLIENT_SECRET,

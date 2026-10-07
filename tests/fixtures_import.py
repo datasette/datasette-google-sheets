@@ -21,7 +21,7 @@ import pytest
 import pytest_asyncio
 from datasette.app import Datasette
 from datasette.database import Database
-from datasette_google_auth import Credential, get_credential
+from datasette_google_credentials import Credential, get_credential
 from fixtures_sheets import ALICE
 from mock_google.oauth import SCOPE_SHEETS_RO
 from ulid import ULID
@@ -148,7 +148,7 @@ def import_link(
 @pytest.fixture
 def events(datasette: Datasette, monkeypatch) -> list:
     """Every event Datasette tracks about the ``data`` database during the
-    test, in order (creating a credential tracks google-auth's own)."""
+    test, in order (creating a credential tracks google-credentials's own)."""
     tracked: list = []
 
     async def track_event(event) -> None:

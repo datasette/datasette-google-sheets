@@ -8,7 +8,7 @@ import json
 import logging
 from pathlib import Path
 
-import datasette_google_auth
+import datasette_google_credentials
 import pytest
 import pytest_asyncio
 from datasette import hookimpl
@@ -175,15 +175,15 @@ async def columns_of(data_db, table):
 
 
 @pytest.mark.parametrize("module", [ROUTES_MODULE, SERVICE_MODULE])
-def test_uses_only_the_public_google_auth_api(module):
+def test_uses_only_the_public_google_credentials_api(module):
     tree = ast.parse(module.read_text())
     imported = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom) and node.module:
-            if node.module.startswith("datasette_google_auth"):
-                assert node.module == "datasette_google_auth", node.module
+            if node.module.startswith("datasette_google_credentials"):
+                assert node.module == "datasette_google_credentials", node.module
                 imported |= {alias.name for alias in node.names}
-    assert imported <= set(datasette_google_auth.__all__)
+    assert imported <= set(datasette_google_credentials.__all__)
 
 
 def test_routes_module_has_no_future_annotations():
@@ -320,7 +320,7 @@ async def test_status_flags(datasette, monkeypatch):
     admin = (await get(datasette, "/status", actor=ADMIN)).json()
     assert (admin["can_schedule"], admin["is_admin"]) == (True, True)
 
-    # D21: once google-auth exports oauth_configured(datasette), it's used.
+    # D21: once google-credentials exports oauth_configured(datasette), it's used.
     calls = []
 
     def oauth_configured(ds):
@@ -328,7 +328,10 @@ async def test_status_flags(datasette, monkeypatch):
         return False
 
     monkeypatch.setattr(
-        datasette_google_auth, "oauth_configured", oauth_configured, raising=False
+        datasette_google_credentials,
+        "oauth_configured",
+        oauth_configured,
+        raising=False,
     )
     assert (await get(datasette, "/status")).json()["oauth_configured"] is False
     assert calls == [datasette]
@@ -378,7 +381,7 @@ async def test_credentials_by_direction(datasette, sa_credential, oauth_credenti
     assert [c["id"] for c in exports["credentials"]] == [oauth.id, sa.id]
 
     assert imports["connect_url"] == (
-        "/-/google-auth/connect?return_to=%2F-%2Fgoogle-sheets"
+        "/-/google-credentials/connect?return_to=%2F-%2Fgoogle-sheets"
     )
     back = await get(
         datasette,

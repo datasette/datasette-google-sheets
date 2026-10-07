@@ -110,7 +110,7 @@ def validate_interval(datasette: Datasette, interval_minutes: int | None) -> int
 
 
 def internal_db_is_persistent(datasette: Datasette) -> bool:
-    """google-auth's rule (its D30, ``routes/api.py`` status): without
+    """google-credentials's rule (its D30, ``routes/api.py`` status): without
     ``--internal`` the internal DB is a temp file deleted at exit
     (``is_temp_disk``) or in memory, so schedules would vanish (D19)."""
     internal = datasette.get_internal_database()

@@ -24,7 +24,7 @@
 
 * **Not found, never forbidden.** For anyone without ``google-sheets-admin``,
   an unknown link id and someone else's link must look the same: a 404, not
-  a 403, so ids can't be probed (google-auth D25's reasoning). Admins can see
+  a 403, so ids can't be probed (google-credentials D25's reasoning). Admins can see
   every link, so for them only a real unknown id is a 404. The routes
   (ticket 13) enforce this; use ``can_view_link`` as the existence check.
 """

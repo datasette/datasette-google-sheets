@@ -1,4 +1,4 @@
-"""Datasette + google-auth + this plugin, wired to the mock Google, plus
+"""Datasette + google-credentials + this plugin, wired to the mock Google, plus
 credential helpers. Imported by conftest.py.
 
     async def test_something(datasette, mock_google, sa_credential, oauth_credential):
@@ -7,12 +7,12 @@ credential helpers. Imported by conftest.py.
         cred = await get_credential(datasette, sa.id, actor=ALICE, scopes=[SCOPE_SHEETS])
         response = await cred.request("GET", f"{SHEETS_BASE}/v4/spreadsheets/students")
 
-Credentials are created only through google-auth's public surface: its HTTP
-API (``POST /-/google-auth/api/service-accounts``) and its "Connect Google"
+Credentials are created only through google-credentials's public surface: its HTTP
+API (``POST /-/google-credentials/api/service-accounts``) and its "Connect Google"
 flow against the auto-approving mock consent screen. Never its tables.
 
 This file is ours, not vendored: it stays when ``fixtures_google.py`` is
-swapped for ``datasette_google_auth.testing`` (D22).
+swapped for ``datasette_google_credentials.testing`` (D22).
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ import pytest
 import pytest_asyncio
 from cryptography.fernet import Fernet
 from datasette.app import Datasette
-from datasette_google_auth import CredentialInfo, connect_url, list_credentials
+from datasette_google_credentials import CredentialInfo, connect_url, list_credentials
 from fixtures_google import MockGoogle
 from mock_google.oauth import DEFAULT_REDIRECT_URI, DEFAULT_USER, GoogleUser
 
@@ -35,11 +35,11 @@ BOB = {"id": "bob"}
 
 SHEETS_PLUGIN = "datasette-google-sheets"
 
-# google-auth's actions: any signed-in actor may connect Google or add a
+# google-credentials's actions: any signed-in actor may connect Google or add a
 # service account in these tests (a test narrows them via `config=`).
 DEFAULT_PERMISSIONS: dict[str, Any] = {
-    "google-auth-connect": {"id": "*"},
-    "google-auth-add-service-account": {"id": "*"},
+    "google-credentials-connect": {"id": "*"},
+    "google-credentials-add-service-account": {"id": "*"},
 }
 
 __all__ = [
@@ -57,16 +57,16 @@ async def make_datasette(
     mock_google: MockGoogle,
     *,
     config: dict[str, Any] | None = None,
-    google_auth_config: dict[str, Any] | None = None,
+    google_credentials_config: dict[str, Any] | None = None,
     sheets_config: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> Datasette:
-    """A started ``Datasette(memory=True)`` with google-auth pointed at the
+    """A started ``Datasette(memory=True)`` with google-credentials pointed at the
     mock (OAuth client, base URLs, transport, a fresh encryption key) and
     this plugin loaded (it's installed, so it always is).
 
     ``config`` is Datasette config; its ``permissions`` are merged over
-    ``DEFAULT_PERMISSIONS``. ``google_auth_config`` overrides google-auth's
+    ``DEFAULT_PERMISSIONS``. ``google_credentials_config`` overrides google-credentials's
     plugin block, ``sheets_config`` sets ours."""
     config = dict(config or {})
     config["permissions"] = {**DEFAULT_PERMISSIONS, **(config.get("permissions") or {})}
@@ -78,7 +78,7 @@ async def make_datasette(
     datasette = mock_google.datasette(
         plugin_config={
             "encryption-key": Fernet.generate_key().decode(),
-            **(google_auth_config or {}),
+            **(google_credentials_config or {}),
         },
         config=config,
         **kwargs,
@@ -110,7 +110,7 @@ def sa_credential(
     datasette: Datasette, service_account_keys
 ) -> Callable[..., Awaitable[CredentialInfo]]:
     """``await sa_credential(owner, key="test", label=None)``: add a service
-    account through google-auth's HTTP API as ``owner`` (an id or actor).
+    account through google-credentials's HTTP API as ``owner`` (an id or actor).
     ``key`` names a ``service_account_keys`` entry: ``test`` is an editor on
     the fixture spreadsheets, ``other`` has access to none."""
 
@@ -124,7 +124,7 @@ def sa_credential(
         if label is not None:
             body["label"] = label
         response = await datasette.client.post(
-            "/-/google-auth/api/service-accounts",
+            "/-/google-credentials/api/service-accounts",
             json=body,
             actor=actor,
             headers={"Sec-Fetch-Site": "same-origin"},
@@ -141,8 +141,8 @@ def oauth_credential(
     datasette: Datasette, mock_google: MockGoogle
 ) -> Callable[..., Awaitable[CredentialInfo]]:
     """``await oauth_credential(owner, user=DEFAULT_USER, granted_scopes=None)``:
-    run google-auth's Connect Google flow as ``owner`` against the mock's
-    auto-approving consent screen (as google-auth's tests/test_oauth.py does).
+    run google-credentials's Connect Google flow as ``owner`` against the mock's
+    auto-approving consent screen (as google-credentials's tests/test_oauth.py does).
     ``granted_scopes`` models partial consent (e.g. no ``spreadsheets``)."""
 
     async def connect(

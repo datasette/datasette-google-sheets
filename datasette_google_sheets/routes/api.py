@@ -9,15 +9,15 @@ unlink and delete but never run or edit (D15). Someone else's link is the
 same 404 as an unknown id, except to admins, who get a 403 when they try to
 operate it.
 
-Errors are ``{ok: false, error, code, ...}``, google-auth's
+Errors are ``{ok: false, error, code, ...}``, google-credentials's
 ``error_response`` shape. ``api_errors`` maps ``ApiError``,
-``ScheduleError``, ``GoogleAuthError`` (via google-auth's own
+``ScheduleError``, ``GoogleCredentialsError`` (via google-credentials's own
 ``error_response``) and Sheets/transport errors; nothing escapes a
 handler, so no message reaches core's request span. A malformed body is the
 router's 400 (``{error, errors}``).
 
 CSRF: Datasette (>=1.0a41) checks ``Sec-Fetch-Site`` / ``Origin`` on every
-POST before any route runs, so there is no token (google-auth D30). Bodies
+POST before any route runs, so there is no token (google-credentials D30). Bodies
 are capped at ``router.MAX_BODY_BYTES``.
 """
 
@@ -29,8 +29,8 @@ from typing import Annotated, Any
 
 import httpx2
 from datasette import Response
-from datasette_google_auth import (
-    GoogleAuthError,
+from datasette_google_credentials import (
+    GoogleCredentialsError,
     connect_url,
     error_response,
     get_credential,
@@ -94,7 +94,7 @@ def api_errors(fn):
             return error.response()
         except ScheduleError as error:
             return ApiError(error.code, error.message, error.status).response()
-        except GoogleAuthError as error:
+        except GoogleCredentialsError as error:
             return error_response(error)
         except SheetsError as error:
             return ApiError(

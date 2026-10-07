@@ -4,11 +4,11 @@ import ast
 import json
 from pathlib import Path
 
-import datasette_google_auth
+import datasette_google_credentials
 import httpx2
 import pytest
 import pytest_asyncio
-from datasette_google_auth import CredentialBroken, get_credential
+from datasette_google_credentials import CredentialBroken, get_credential
 from fixtures_export import EXPORT_MAX_CELLS, FORMULA, JSON_TEXT
 from fixtures_sheets import ALICE, BOB
 from mock_google.oauth import SCOPE_SHEETS
@@ -102,19 +102,19 @@ def sheets_calls(mock_google, method=None):
 # --- Guards ------------------------------------------------------------------------
 
 
-def test_uses_only_the_public_google_auth_api():
+def test_uses_only_the_public_google_credentials_api():
     tree = ast.parse(EXPORTER_MODULE.read_text())
     imported = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom) and node.module:
-            if node.module.startswith("datasette_google_auth"):
-                assert node.module == "datasette_google_auth", node.module
+            if node.module.startswith("datasette_google_credentials"):
+                assert node.module == "datasette_google_credentials", node.module
                 imported |= {alias.name for alias in node.names}
         elif isinstance(node, ast.Import):
             assert not any(
-                a.name.startswith("datasette_google_auth") for a in node.names
+                a.name.startswith("datasette_google_credentials") for a in node.names
             )
-    assert imported <= set(datasette_google_auth.__all__)
+    assert imported <= set(datasette_google_credentials.__all__)
 
 
 def test_never_logs():
@@ -443,7 +443,7 @@ async def test_partial_google_failure_reports_rows_written(
 async def test_partial_transport_or_auth_failure_counts_chunks(
     datasette, export_link, sa_cred, target, mock_google, monkeypatch, failure
 ):
-    """D31: a GoogleAuthError or transport error between chunks carries no
+    """D31: a GoogleCredentialsError or transport error between chunks carries no
     rows_written, so the runner counts the chunks itself."""
     real_append = sheets.append
     calls = 0

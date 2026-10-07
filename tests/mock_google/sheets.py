@@ -1,4 +1,4 @@
-"""A mutable Sheets model: the importer and exporter samples (google-auth
+"""A mutable Sheets model: the importer and exporter samples (google-credentials
 tickets 16/17) plus what datasette-google-sheets needs (its ticket 04).
 
 Cells hold plain JSON values (str, int, float, bool) or a ``Formatted`` value

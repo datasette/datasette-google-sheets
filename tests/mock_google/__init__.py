@@ -1,10 +1,10 @@
-"""In-process mock of the Google endpoints datasette-google-auth talks to.
+"""In-process mock of the Google endpoints datasette-google-credentials talks to.
 
-VENDORED from datasette-google-auth (``~/work/simonw/datasette-google-auth``,
+VENDORED from datasette-google-credentials (``~/work/simonw/datasette-google-credentials``,
 ``tests/mock_google/`` and ``tests/fixtures_google.py``) at commit
 **a2f4eee** ("Equalise permission checks for unknown and invisible credential
-ids"), per this repo's D22. To be replaced by ``datasette_google_auth.testing``
-once it exists (see ``../datasette-google-auth/todos/sheets-consumer/
+ids"), per this repo's D22. To be replaced by ``datasette_google_credentials.testing``
+once it exists (see ``../datasette-google-credentials/todos/sheets-consumer/
 03-public-testing-module.md``, which pulls the Sheets extensions below back
 upstream). Local changes since a2f4eee:
 
@@ -18,7 +18,7 @@ upstream). Local changes since a2f4eee:
   ``RATE_LIMIT_EXCEEDED``), injectable via ``faults.fail(..., reason=)``;
   ``faults.fail(..., after=N)`` lets N matching requests through first
   (ticket 05's partial-append test).
-- fixtures_google.py: no ``datasette_google_auth.config`` import.
+- fixtures_google.py: no ``datasette_google_credentials.config`` import.
 
 Served by FastAPI and mounted with ``httpx2.ASGITransport`` (see
 ``tests/fixtures_google.py``): no uvicorn, no ports, no network.

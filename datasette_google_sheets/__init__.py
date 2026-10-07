@@ -1,7 +1,7 @@
 """datasette-google-sheets: import and export Google Sheets.
 
 This module holds the plugin hooks only; logic lives in its own modules.
-Credentials come from datasette-google-auth's public API and schedules from
+Credentials come from datasette-google-credentials's public API and schedules from
 datasette-cron.
 """
 
@@ -10,6 +10,7 @@ from datasette.utils import StartupError
 from datasette_vite import vite_entry
 from sqlite_utils import Database as SqliteUtilsDatabase
 
+from .banner import table_banner
 from .config import load_config
 from .internal_db import InternalDB
 from .internal_migrations import internal_migrations
@@ -85,3 +86,12 @@ def extra_template_vars(datasette):
 def permission_resources_sql(datasette, actor, action):
     # Synced tables are read-only for every actor, root included (D7).
     return synced_table_deny(datasette, action)
+
+
+@hookimpl
+def top_table(datasette, request, database, table):
+    # "Synced from Google Sheets" / "Imported from" banner (D15).
+    async def inner():
+        return await table_banner(datasette, request, database, table)
+
+    return inner

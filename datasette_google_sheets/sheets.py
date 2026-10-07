@@ -1,13 +1,13 @@
 """A thin, typed client for the Google Sheets v4 REST API (D6).
 
-Every call takes a google-auth ``Credential`` (from ``get_credential``) and
+Every call takes a google-credentials ``Credential`` (from ``get_credential``) and
 goes through ``cred.request()``: this module never mints tokens and never
-builds its own HTTP client. ``GoogleAuthError``s raised by ``cred.request()``
+builds its own HTTP client. ``GoogleCredentialsError``s raised by ``cred.request()``
 (a broken or revoked credential, missing scopes, ...) propagate unchanged;
 callers handle them. A non-2xx response from Sheets raises ``SheetsError``.
 
 URL parsing, title quoting, the chunking rule and the URL builder come from
-datasette-google-auth's ``samples/google_sheets_import.py`` and
+datasette-google-credentials's ``samples/google_sheets_import.py`` and
 ``samples/google_sheets_export.py``.
 
 **Errors keep Google's reason (D6, D30).** Google APIs answer with the
@@ -39,7 +39,7 @@ from urllib.parse import quote, urlsplit
 
 if TYPE_CHECKING:
     import httpx2
-    from datasette_google_auth import Credential
+    from datasette_google_credentials import Credential
 
 SHEETS_API = "https://sheets.googleapis.com/v4/spreadsheets"
 CHUNK_ROWS = 5_000
@@ -64,7 +64,7 @@ API_DISABLED_MESSAGE = (
     "Google Sheets API in the Cloud project of this credential{project}, "
     "then try again."
 )
-# Which project that is, by credential type (google-auth wiki/TODO.md "Now":
+# Which project that is, by credential type (google-credentials wiki/TODO.md "Now":
 # an OAuth import 403s until the API is on in the OAuth client's project).
 _API_DISABLED_PROJECT = {
     "google_oauth": " (the project of the OAuth client behind Connect Google)",
@@ -376,7 +376,7 @@ async def append(
 async def create_spreadsheet(cred: Credential, title: str) -> tuple[str, Tab]:
     """A new spreadsheet in the credential's Drive: ``(id, its first tab)``.
     The first tab's title is locale-dependent ("Sheet1", "Feuille 1", ...).
-    Service accounts can't usefully do this (google-auth D28): callers
+    Service accounts can't usefully do this (google-credentials D28): callers
     refuse them before calling."""
     data = await _call(cred, "POST", SHEETS_API, json={"properties": {"title": title}})
     return data["spreadsheetId"], Tab.from_properties(data["sheets"][0]["properties"])

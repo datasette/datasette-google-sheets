@@ -3,7 +3,7 @@
 Reads use ``db.execute()``; writes use ``execute_write_fn()`` with named
 inner functions, because Datasette labels each write's ``db.query`` span with
 the callback's ``__qualname__`` (a lambda would show up as ``<lambda>``).
-This follows datasette-google-auth (its HANDOFF decision 1).
+This follows datasette-google-credentials (its HANDOFF decision 1).
 
 Rows come back as ``Link`` / ``Run`` Pydantic models with the JSON columns
 parsed and the 0/1 columns as bools, at this boundary, so nothing downstream
@@ -342,6 +342,18 @@ class InternalDB:
             " WHERE direction = 'import' AND interval_minutes IS NOT NULL"
         )
         return {(row[0], row[1]) for row in result.rows}
+
+    async def import_links_for_table(
+        self, database_name: str, table_name: str
+    ) -> list[Link]:
+        """Every import link into one table, synced or one-shot, newest
+        first (the table page banner)."""
+        result = await self.db.execute(
+            f"SELECT * FROM {LINKS} WHERE direction = 'import'"
+            " AND database_name = ? AND table_name = ? ORDER BY id DESC",
+            [database_name, table_name],
+        )
+        return [Link.model_validate(dict(row)) for row in result.rows]
 
     async def scheduled_links(self) -> list[Link]:
         """Every link with an interval, enabled or not, oldest first. The

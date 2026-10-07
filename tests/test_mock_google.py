@@ -6,7 +6,7 @@ import socket
 import httpx2
 import mock_google as mock_google_package
 import pytest
-from datasette_google_auth import MissingScopes, get_credential
+from datasette_google_credentials import MissingScopes, get_credential
 from fixtures_google import NetworkBlocked
 from fixtures_sheets import ALICE, BOB, SHEETS_PLUGIN, make_datasette
 from mock_google import SHEETS_BASE
@@ -69,9 +69,9 @@ def assert_google_error(response, code, status, reason=None):
 
 def test_vendored_source_is_recorded():
     doc = mock_google_package.__doc__
-    assert "datasette-google-auth" in doc
+    assert "datasette-google-credentials" in doc
     assert "a2f4eee" in doc
-    assert "datasette_google_auth.testing" in doc
+    assert "datasette_google_credentials.testing" in doc
 
 
 def test_network_is_blocked():
@@ -610,15 +610,15 @@ def test_fault_reason_and_status_must_agree(mock_google):
         mock_google.faults.fail("/v4/")
 
 
-# --- Datasette + google-auth + this plugin ------------------------------------
+# --- Datasette + google-credentials + this plugin ------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_datasette_is_wired_to_the_mock(datasette, mock_google):
     response = await datasette.client.get("/-/plugins.json")
     names = {p["name"] for p in response.json()}
-    assert {SHEETS_PLUGIN, "datasette-google-auth", "datasette-cron"} <= names
-    config = datasette.plugin_config("datasette-google-auth")
+    assert {SHEETS_PLUGIN, "datasette-google-credentials", "datasette-cron"} <= names
+    config = datasette.plugin_config("datasette-google-credentials")
     assert config["google_base_urls"] == mock_google.plugin_config()["google_base_urls"]
     assert config["encryption-key"]
 

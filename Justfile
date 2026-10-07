@@ -1,4 +1,4 @@
-# Ports: Datasette 8022, Vite 5188 (D1; google-auth uses 8021/5187).
+# Ports: Datasette 8022, Vite 5188 (D1; google-credentials uses 8021/5187).
 
 # === Frontend ===
 # Svelte 5 + Vite, built into the package (manifest.json + static/gen/,
@@ -58,9 +58,9 @@ test *flags:
 
 # === Development ===
 
-# DATASETTE_GOOGLE_AUTH_KEY is passed through to google-auth's encryption-key.
+# DATASETTE_GOOGLE_CREDENTIALS_KEY is passed through to google-credentials's encryption-key.
 # Keep it stable across restarts (generate once with
-# `uv run datasette google-auth generate-key`): credentials stored in
+# `uv run datasette google-credentials generate-key`): credentials stored in
 # .tmp/internal.db under one key can't be decrypted under another. Unset, the
 # server still starts but no credentials can be created.
 dev *flags:
@@ -68,12 +68,12 @@ dev *flags:
   DATASETTE_SECRET=abc123 uv run datasette \
     -s permissions.google-sheets-schedule true \
     -s permissions.google-sheets-admin true \
-    -s permissions.google-auth-connect true \
-    -s permissions.google-auth-add-service-account true \
-    -s permissions.google-auth-admin true \
+    -s permissions.google-credentials-connect true \
+    -s permissions.google-credentials-add-service-account true \
+    -s permissions.google-credentials-admin true \
     -s permissions.datasette-cron-access true \
     -s permissions.permissions-debug true \
-    -s plugins.datasette-google-auth.encryption-key '{"$env": "DATASETTE_GOOGLE_AUTH_KEY"}' \
+    -s plugins.datasette-google-credentials.encryption-key '{"$env": "DATASETTE_GOOGLE_CREDENTIALS_KEY"}' \
     --internal .tmp/internal.db \
     -p 8022 \
     --create .tmp/tmp.db \

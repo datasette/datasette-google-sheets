@@ -13,8 +13,8 @@ but never run or edit one (D15). The rules, in one place:
   owner's credential (orchestrator note, ticket 03/09).
 
 Failures raise ``ApiError`` (``{ok: false, error, code, ...}``, the same
-shape as google-auth's ``error_response``). ``ScheduleError`` (ticket 10)
-and google-auth's ``GoogleAuthError`` pass through to the route, which maps
+shape as google-credentials's ``error_response``). ``ScheduleError`` (ticket 10)
+and google-credentials's ``GoogleCredentialsError`` pass through to the route, which maps
 them.
 
 Every mutation ends with ``schedule.sync_task`` so cron matches the link row
@@ -27,12 +27,12 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-import datasette_google_auth
+import datasette_google_credentials
 from datasette import Response
 from datasette.events import AlterTableEvent
 from datasette.resources import DatabaseResource, QueryResource, TableResource
 from datasette.utils import escape_sqlite
-from datasette_google_auth import get_credential
+from datasette_google_credentials import get_credential
 from sqlite_utils import Database as SqliteUtilsDatabase
 
 from .importer import ImporterError, check_table, stored_table_name
@@ -55,7 +55,7 @@ from .sheets import SheetsError
 if TYPE_CHECKING:
     from datasette.app import Datasette
     from datasette.database import Database
-    from datasette_google_auth import Credential, CredentialInfo
+    from datasette_google_credentials import Credential, CredentialInfo
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ _MODE_ACTIONS = {
     "replace": ("insert-row", "delete-row"),
     "upsert": WRITE_ACTIONS,
 }
-# Actor keys that hold a display name, as google-auth's admin view reads them.
+# Actor keys that hold a display name, as google-credentials's admin view reads them.
 _NAME_KEYS = ("display_name", "display", "name", "username", "login")
 
 
@@ -104,21 +104,21 @@ def require_actor(actor: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def scope_for(direction: str) -> str:
-    """google-auth D27: imports only read, exports write."""
+    """google-credentials D27: imports only read, exports write."""
     return SCOPE_IMPORT if direction == "import" else SCOPE_EXPORT
 
 
 def oauth_configured(datasette: Datasette) -> bool | None:
-    """google-auth's ``oauth_configured(datasette)`` once it exports it; None
+    """google-credentials's ``oauth_configured(datasette)`` once it exports it; None
     (unknown: always offer Connect Google) until then (D21)."""
-    check = getattr(datasette_google_auth, "oauth_configured", None)
+    check = getattr(datasette_google_credentials, "oauth_configured", None)
     if not callable(check):
         return None
     return bool(check(datasette))
 
 
 def connect_return_to(datasette: Datasette, return_to: str | None) -> str:
-    """A local path to come back to after Connect Google (google-auth
+    """A local path to come back to after Connect Google (google-credentials
     re-checks it with its own ``safe_return_to``); the dashboard otherwise."""
     if return_to and return_to.startswith("/") and not return_to.startswith("//"):
         return return_to
@@ -127,7 +127,7 @@ def connect_return_to(datasette: Datasette, return_to: str | None) -> str:
 
 async def owner_names(datasette: Datasette, ids: list[str]) -> dict[str, str]:
     """Display names for actor ids via ``datasette.actors_from_ids()``, as
-    google-auth's admin API resolves them. Ids without a name other than
+    google-credentials's admin API resolves them. Ids without a name other than
     the id are absent. A failing identity plugin means "no names"."""
     if not ids:
         return {}
@@ -433,7 +433,7 @@ async def _export_fields(
 
 
 def _sa_cannot_create(info: CredentialInfo) -> ApiError:
-    """D14 / google-auth D28, before anything is stored."""
+    """D14 / google-credentials D28, before anything is stored."""
     email = info.google_email
     return ApiError(
         "sa_cannot_create",
@@ -456,7 +456,7 @@ async def create_link(
     datasette: Datasette, actor: dict[str, Any], body: CreateLinkRequest
 ) -> Link:
     """Validate and store a link (the route then runs it once). Raises
-    ``ApiError``, ``ScheduleError`` or a ``GoogleAuthError``."""
+    ``ApiError``, ``ScheduleError`` or a ``GoogleCredentialsError``."""
     direction = body.direction
     modes = IMPORT_MODES if direction == "import" else EXPORT_MODES
     if body.mode not in modes:

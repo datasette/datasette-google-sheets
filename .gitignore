@@ -12,7 +12,7 @@ venv
 dist
 build
 # Resolved against ../ sibling checkouts via [tool.uv.sources], so the lock
-# is laptop-specific (same as datasette-google-auth / -cron / -acl-share, D25).
+# is laptop-specific (same as datasette-google-credentials / -cron / -acl-share, D25).
 uv.lock
 
 node_modules/

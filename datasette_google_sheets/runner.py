@@ -38,13 +38,13 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import httpx2
 from datasette.resources import DatabaseResource, TableResource
-from datasette_google_auth import (
+from datasette_google_credentials import (
     CredentialBroken,
     CredentialChanged,
     CredentialForbidden,
     CredentialNotFound,
     CredentialUndecryptable,
-    GoogleAuthError,
+    GoogleCredentialsError,
     GoogleTokenError,
     MissingScopes,
     connect_url,
@@ -60,11 +60,11 @@ from .sheets import SheetsError, SheetsErrorKind
 
 if TYPE_CHECKING:
     from datasette.app import Datasette
-    from datasette_google_auth import CredentialInfo
+    from datasette_google_credentials import CredentialInfo
 
 logger = logging.getLogger(__name__)
 
-# google-auth D27: imports only read, exports write.
+# google-credentials D27: imports only read, exports write.
 SCOPE_IMPORT = "https://www.googleapis.com/auth/spreadsheets.readonly"
 SCOPE_EXPORT = "https://www.googleapis.com/auth/spreadsheets"
 
@@ -404,7 +404,7 @@ def classify(
     if isinstance(error, SheetsError):
         return _sheets_failure(link, error.kind, error.message, info, reconnect, error)
 
-    if isinstance(error, GoogleAuthError):
+    if isinstance(error, GoogleCredentialsError):
         return _auth_failure(error, reconnect)
 
     if isinstance(error, httpx2.TimeoutException):
@@ -468,9 +468,9 @@ def _sheets_failure(
     )
 
 
-def _auth_failure(error: GoogleAuthError, reconnect: str) -> Failure:
+def _auth_failure(error: GoogleCredentialsError, reconnect: str) -> Failure:
     if isinstance(error, CredentialBroken):
-        # google-auth sets reconnect_url only for OAuth credentials the actor
+        # google-credentials sets reconnect_url only for OAuth credentials the actor
         # owns; ours points back at the link.
         fix = (
             "Reconnect Google, then resume the link."

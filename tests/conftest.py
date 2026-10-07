@@ -1,4 +1,4 @@
-# Shared fixtures. As in datasette-google-auth, the mock Google fixtures live
+# Shared fixtures. As in datasette-google-credentials, the mock Google fixtures live
 # in fixtures_google.py (vendored, D22) and ours in fixtures_sheets.py, so
 # later tickets can add theirs here without conflicts. The default suite must
 # never contact real Google: _block_network (autouse, session) enforces it.

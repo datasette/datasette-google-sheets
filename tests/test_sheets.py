@@ -4,10 +4,14 @@ import ast
 from pathlib import Path
 from types import SimpleNamespace
 
-import datasette_google_auth
+import datasette_google_credentials
 import httpx2
 import pytest
-from datasette_google_auth import CredentialBroken, GoogleAuthError, get_credential
+from datasette_google_credentials import (
+    CredentialBroken,
+    GoogleCredentialsError,
+    get_credential,
+)
 from fixtures_sheets import ALICE
 from mock_google.errors import ERROR_INFO
 from mock_google.oauth import SCOPE_SHEETS, SCOPE_SHEETS_RO
@@ -62,19 +66,19 @@ def oauth_cred(datasette, oauth_credential):
     return make
 
 
-def test_uses_only_the_public_google_auth_api():
+def test_uses_only_the_public_google_credentials_api():
     tree = ast.parse(SHEETS_MODULE.read_text())
     imported = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom) and node.module:
-            if node.module.startswith("datasette_google_auth"):
-                assert node.module == "datasette_google_auth", node.module
+            if node.module.startswith("datasette_google_credentials"):
+                assert node.module == "datasette_google_credentials", node.module
                 imported |= {alias.name for alias in node.names}
         elif isinstance(node, ast.Import):
             assert not any(
-                a.name.startswith("datasette_google_auth") for a in node.names
+                a.name.startswith("datasette_google_credentials") for a in node.names
             )
-    assert imported <= set(datasette_google_auth.__all__)
+    assert imported <= set(datasette_google_credentials.__all__)
 
 
 def test_never_logs():
@@ -83,7 +87,7 @@ def test_never_logs():
     assert "print(" not in source
 
 
-# --- Parsing (cases from google-auth's tests/test_sample_importer.py) ----------
+# --- Parsing (cases from google-credentials's tests/test_sample_importer.py) ----------
 
 
 @pytest.mark.parametrize(
@@ -542,11 +546,11 @@ def test_repr_has_no_message():
 
 
 @pytest.mark.asyncio
-async def test_google_auth_errors_propagate_unchanged(oauth_cred, mock_google):
+async def test_google_credentials_errors_propagate_unchanged(oauth_cred, mock_google):
     cred = await oauth_cred()
     for refresh_token in mock_google.oauth.refresh_tokens():
         mock_google.oauth.revoke(refresh_token)
-    with pytest.raises(GoogleAuthError) as excinfo:
+    with pytest.raises(GoogleCredentialsError) as excinfo:
         await get_tabs(cred, "students")
     assert isinstance(excinfo.value, CredentialBroken)
     assert not isinstance(excinfo.value, SheetsError)

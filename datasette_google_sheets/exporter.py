@@ -1,7 +1,7 @@
 """The export runner: read a table, view, stored query or SQL as an actor and
 write it to a Google Sheets tab (D13, D14).
 
-A production version of datasette-google-auth's
+A production version of datasette-google-credentials's
 ``samples/google_sheets_export.py``, extended to views, stored queries and
 links (a stored spreadsheet id and tab gid).
 
@@ -28,7 +28,7 @@ import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
-from datasette_google_auth import GoogleAuthError
+from datasette_google_credentials import GoogleCredentialsError
 
 from . import sheets
 from .config import get_config
@@ -36,7 +36,7 @@ from .sheets import SheetsError, SheetsErrorKind, Tab
 
 if TYPE_CHECKING:
     from datasette.app import Datasette
-    from datasette_google_auth import Credential
+    from datasette_google_credentials import Credential
 
     from .internal_db import Link
 
@@ -61,11 +61,11 @@ class ExportError(Exception):
     ``message`` is for the link's owner. ``rows_written`` is how many data
     rows reached the sheet before a ``partial`` failure. For ``partial``,
     ``kind`` is the ``SheetsError`` kind when Google refused a chunk (None
-    for a ``GoogleAuthError`` or transport error), and ``__cause__`` is the
+    for a ``GoogleCredentialsError`` or transport error), and ``__cause__`` is the
     original exception, so ticket 09 can decide pause vs retry.
     ``share_with`` is the service account's email for ``sa_cannot_create``.
 
-    ``SheetsError`` and ``GoogleAuthError`` raised before anything was
+    ``SheetsError`` and ``GoogleCredentialsError`` raised before anything was
     written propagate unchanged, not as an ``ExportError``.
     """
 
@@ -306,7 +306,7 @@ async def _append_counted(
     """Append ``values`` chunk by chunk and return the sheet rows written.
 
     Counts chunks here (D31): ``SheetsError.rows_written`` covers a Google
-    error part-way through, but a ``GoogleAuthError`` or transport error
+    error part-way through, but a ``GoogleCredentialsError`` or transport error
     between chunks carries no count. Any failure after at least one data row
     landed raises ``ExportError("partial")``; before that, the original
     error propagates unchanged.
@@ -327,7 +327,7 @@ async def _append_counted(
             raise
         if isinstance(error, SheetsError):
             detail = error.message
-        elif isinstance(error, GoogleAuthError):
+        elif isinstance(error, GoogleCredentialsError):
             detail = str(error)
         else:
             # A transport error's text can carry the request URL.
@@ -352,7 +352,7 @@ async def run_export(
     """Export ``link``'s source to its tab, reading as ``actor``.
 
     - ``new`` before its spreadsheet exists: refuse a service account
-      (``sa_cannot_create``, google-auth D28), else read, check the cap and
+      (``sa_cannot_create``, google-credentials D28), else read, check the cap and
       create the spreadsheet, titled after the link. Afterwards a ``new``
       link behaves as ``replace`` on that tab.
     - ``replace``: clear the tab, then append (D14). ``append``: append only.
@@ -360,7 +360,7 @@ async def run_export(
       append mode.
 
     The cap is checked before any write. Raises ``ExportError`` (see its
-    codes), or ``SheetsError`` / ``GoogleAuthError`` / transport errors
+    codes), or ``SheetsError`` / ``GoogleCredentialsError`` / transport errors
     unchanged when nothing was written.
     """
     header = _header_row(link)

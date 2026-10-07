@@ -3,7 +3,7 @@
 Import Google Sheets into Datasette tables and export tables, views and queries
 to Google Sheets, one-shot or on a schedule. Every import, export and synced
 table is a "link" row in the internal DB (D2). Credentials come from
-datasette-google-auth, schedules from datasette-cron.
+datasette-google-credentials, schedules from datasette-cron.
 
 ## Local-only planning files
 
@@ -19,9 +19,9 @@ datasette-google-auth, schedules from datasette-cron.
 ## Architecture
 
 - **Backend:** Python, Datasette >=1.0a41, datasette-plugin-router, Pydantic
-- **Credentials:** datasette-google-auth, **public API only** (names in its `__all__`:
+- **Credentials:** datasette-google-credentials, **public API only** (names in its `__all__`:
   `list_credentials`, `get_credential`, `Credential.request()` / `.info`, `connect_url`,
-  `error_response`, the `GoogleAuthError` subclasses). Never import its private modules
+  `error_response`, the `GoogleCredentialsError` subclasses). Never import its private modules
   or touch its tables.
 - **Schedules:** datasette-cron (hard dependency, D3). One task per scheduled link,
   `google-sheets:<link_id>`, handler `google_sheets:run-link` (D4). Never use
@@ -31,7 +31,7 @@ datasette-google-auth, schedules from datasette-cron.
 - **Build:** Just (Justfile), uv (Python), npm (frontend)
 
 Sibling checkouts are editable path sources (`[tool.uv.sources]`; uv sources
-aren't transitive, so acl and acl-share are repeated): `../datasette-google-auth`,
+aren't transitive, so acl and acl-share are repeated): `../datasette-google-credentials`,
 `../datasette-cron` (branch `otel`), `../datasette-acl` (`grant-event` or `main`),
 `../datasette-acl-share`.
 
@@ -41,7 +41,7 @@ Always go through `just`.
 
 | Command | What it does |
 |---------|-------------|
-| `just dev` | Datasette on port **8022** (`.tmp/internal.db`, `.tmp/tmp.db`), all google-sheets/google-auth/cron permissions granted |
+| `just dev` | Datasette on port **8022** (`.tmp/internal.db`, `.tmp/tmp.db`), all google-sheets/google-credentials/cron permissions granted |
 | `just dev-with-hmr` | Datasette + Vite HMR (restarts on .py/.html changes) |
 | `just frontend-dev` | Vite dev server on port **5188** |
 | `just frontend` | Build frontend into the package (`manifest.json`, `static/gen/`; gitignored) |
@@ -61,6 +61,7 @@ When stopping dev servers, kill only your own PIDs. Never `pkill -f vite`.
 ```
 datasette_google_sheets/
 ├── __init__.py              # Plugin hooks only
+├── banner.py                # top_table banner: synced state for everyone, sheet + controls for owner/admin (D15)
 ├── config.py                # Pydantic plugin config (extra="forbid"); get_config(datasette)
 ├── exporter.py              # Export runner: read as actor → caps → clear+append → bold frozen header
 ├── importer.py              # Import runner: size cap → fetch → strict headers → mapping → hash → one-txn write
@@ -77,10 +78,13 @@ datasette_google_sheets/
 └── routes/
     ├── pages.py             # Page routes (render HTML)
     └── api.py               # JSON API (Pydantic in/out, OpenAPI)
+└── templates/
+    └── google_sheets_banner.html  # The top_table banner (no JS; autoescaped)
 tests/
-├── mock_google/             # Vendored from google-auth @ a2f4eee, Sheets extended (D22)
+├── mock_google/             # Vendored from google-credentials @ a2f4eee, Sheets extended (D22)
 ├── conftest.py              # Network block + fixture imports
 ├── fixtures_*.py            # google (vendored), sheets, import, export fixtures
+├── test_banner.py           # top_table banner per audience (anonymous/other/owner/admin), paused, provenance, escaping
 ├── test_api.py              # JSON API: auth, owner/admin/404 rules, create validations, lifecycle, OpenAPI
 ├── test_config.py           # defaults, overrides, unknown keys and bounds → StartupError
 ├── test_exporter.py         # sources, caps, truncation, modes, partial writes
@@ -92,7 +96,7 @@ tests/
 ├── test_runner.py           # acting actor, permissions (synced → database level), pause/error/retry, lock
 ├── test_schedule.py         # handler ref, task spec, sync/reconcile, startup ordering, floor clamp, helpers, e2e via cron
 ├── test_sheets.py           # URL parsing, client calls, error classification
-└── test_smoke.py            # google-sheets, google-auth and cron are all registered
+└── test_smoke.py            # google-sheets, google-credentials and cron are all registered
 ```
 
 ## Hooks Used
@@ -114,15 +118,23 @@ tests/
   synced table (D7), selected straight from the links table: core runs plugin permission SQL
   against the internal DB. Paused syncs stay locked; unlink (clearing `interval_minutes`) lifts
   it on the next check. Returns nothing until our startup has created the table
+- `top_table()` — the banner (`banner.py`, `templates/google_sheets_banner.html`). Every
+  viewer of a synced table sees "Synced from Google Sheets · every N min (effective,
+  floor-clamped) · last synced X ago · read-only" and "⚠ Sync paused". Only the owner and
+  `google-sheets-admin` get the sheet title/tab/URL, the pause or error reason and links to
+  `/-/google-sheets/links/<id>` (Sync now / Unlink are links there, not forms). A table with
+  no sync shows the owner/admin "Imported from ‹sheet› on ‹date›" for the newest successful
+  one-shot import; nothing for anyone else. Details are only put in the template context for
+  those viewers, so they can't leak
 - `extra_template_vars()` — `datasette_google_sheets_vite_entry` (datasette-vite; safe
   without a built frontend, it only raises when called with an unknown entrypoint)
 
 ## Environment Variables
 
 - `DATASETTE_SECRET` — required for the dev server (`just dev` sets it)
-- `DATASETTE_GOOGLE_AUTH_KEY` — google-auth's Fernet key; `just dev` passes it through
+- `DATASETTE_GOOGLE_CREDENTIALS_KEY` — google-credentials's Fernet key; `just dev` passes it through
   as `encryption-key`. Keep it stable: credentials in `.tmp/internal.db` can't be
-  decrypted under a different key. Generate with `uv run datasette google-auth generate-key`.
+  decrypted under a different key. Generate with `uv run datasette google-credentials generate-key`.
 
 ## Invariants
 
@@ -135,7 +147,7 @@ tests/
 - Background work always acts as the stored owner, re-resolved on each run (D5).
   Our sync writes never go through `allowed()`; everything else does.
 - Synced tables are read-only via a table-level permission deny only, no triggers (D7).
-- **No cross-repo edits (D21):** never edit `../datasette-google-auth`,
+- **No cross-repo edits (D21):** never edit `../datasette-google-credentials`,
   `../datasette-cron`, `../datasette-acl` or Datasette core. Upstream needs become
   tickets in the sibling's local `todos/`.
 
@@ -160,5 +172,5 @@ tests/
 - **Tests**: `asyncio_mode = "strict"`; async tests use `@pytest.mark.asyncio`, async
   fixtures `@pytest_asyncio.fixture`; shared fixtures in `tests/conftest.py` or `tests/fixtures_*.py`.
 - **Commits**: short imperative subject, no Conventional-Commits prefix; the body explains why.
-- **Reference implementation:** `~/work/simonw/datasette-google-auth` (@ a2f4eee). Copy its
+- **Reference implementation:** `~/work/simonw/datasette-google-credentials` (@ a2f4eee). Copy its
   patterns; never import its private modules.

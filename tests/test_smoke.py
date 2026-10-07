@@ -10,6 +10,6 @@ async def test_plugin_is_installed():
     installed_plugins = {p["name"] for p in response.json()}
     assert {
         "datasette-google-sheets",
-        "datasette-google-auth",
+        "datasette-google-credentials",
         "datasette-cron",
     } <= installed_plugins

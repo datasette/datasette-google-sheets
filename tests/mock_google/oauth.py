@@ -58,7 +58,7 @@ KNOWN_SCOPES = frozenset(
 OAUTH_CLIENT_ID = "mock-client-id.apps.googleusercontent.com"
 OAUTH_CLIENT_SECRET = "mock-client-secret"
 # What datasette.absolute_url() gives under datasette.client.
-DEFAULT_REDIRECT_URI = "http://localhost/-/google-auth/oauth/callback"
+DEFAULT_REDIRECT_URI = "http://localhost/-/google-credentials/oauth/callback"
 
 ISSUER = "https://accounts.google.com"
 CODE_LIFETIME = 600

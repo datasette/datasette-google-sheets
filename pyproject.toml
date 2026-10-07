@@ -12,7 +12,7 @@ requires-python = ">=3.10"
 dependencies = [
     "datasette>=1.0a41",
     # Credentials and tokens; public API only (names in its __all__).
-    "datasette-google-auth",
+    "datasette-google-credentials",
     # Scheduled links run as cron tasks (D3, D4).
     "datasette-cron",
     "datasette-vite>=0.0.1a4",
@@ -21,7 +21,7 @@ dependencies = [
     "sqlite-migrate>=0.1b0",
     "sqlite-utils>=4",  # atomic() nests as a savepoint in our transaction
     "python-ulid>=4",
-    # Declared explicitly, as google-auth and cron do. The SDK is never
+    # Declared explicitly, as google-credentials and cron do. The SDK is never
     # imported by the package (D24).
     # Imported directly (transport errors in sheets.py and runner.py).
     "httpx2>=2.0",
@@ -56,7 +56,7 @@ CI = "https://github.com/datasette/datasette-google-sheets/actions"
 google_sheets = "datasette_google_sheets"
 
 # Editable, path-based sibling checkouts. uv sources are not transitive, so
-# google-auth's own acl and acl-share sources are repeated here.
+# google-credentials's own acl and acl-share sources are repeated here.
 # - ../datasette-cron must be on branch `otel` (unreleased; as datasette-alerts).
 # - ../datasette-acl must be on a branch that has the datasette_acl.grants
 #   Principal API (`grant(..., principal=Principal.actor(id), role=...)`):
@@ -65,7 +65,7 @@ google_sheets = "datasette_google_sheets"
 # The editable installs track the working trees, so a `git checkout` in a
 # sibling changes what we develop against.
 [tool.uv.sources]
-datasette-google-auth = { path = "../datasette-google-auth", editable = true }
+datasette-google-credentials = { path = "../datasette-google-credentials", editable = true }
 datasette-cron = { path = "../datasette-cron", editable = true }
 datasette-acl = { path = "../datasette-acl", editable = true }
 datasette-acl-share = { path = "../datasette-acl-share", editable = true }
@@ -96,7 +96,7 @@ exclude = ["tests/", "frontend/"]
 # finder, which ty can't follow; point it at the same checkouts.
 [tool.ty.environment]
 extra-paths = [
-    "../datasette-google-auth",
+    "../datasette-google-credentials",
     "../datasette-cron",
     "../datasette-acl",
     "../datasette-acl-share",

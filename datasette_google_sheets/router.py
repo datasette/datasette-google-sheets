@@ -5,7 +5,7 @@ Every view it hands to Datasette caps the request body at
 (2 MB by default). Link create/update bodies (a URL, a tab, a column mapping)
 are small. datasette-plugin-router reads and parses a ``Body()`` before the
 handler runs, so the cap has to wrap the router's view rather than live in a
-handler. Copied from datasette-google-auth's ``router.py``.
+handler. Copied from datasette-google-credentials's ``router.py``.
 
 It also enforces each route's HTTP method, which neither Datasette (the
 first matching path wins, ``utils.resolve_routes``) nor the plugin router

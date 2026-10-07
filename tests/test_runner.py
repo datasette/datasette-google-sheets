@@ -9,7 +9,7 @@ import logging
 import sqlite3
 from pathlib import Path
 
-import datasette_google_auth
+import datasette_google_credentials
 import httpx2
 import pytest
 import pytest_asyncio
@@ -17,7 +17,7 @@ from datasette import hookimpl
 from datasette.permissions import PermissionSQL
 from datasette.plugins import pm
 from datasette.resources import DatabaseResource, TableResource
-from datasette_google_auth import (
+from datasette_google_credentials import (
     CredentialBroken,
     CredentialChanged,
     CredentialForbidden,
@@ -151,19 +151,19 @@ def plugin():
 # --------------------------------------------------------------- guards
 
 
-def test_uses_only_the_public_google_auth_api():
+def test_uses_only_the_public_google_credentials_api():
     tree = ast.parse(RUNNER_MODULE.read_text())
     imported = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom) and node.module:
-            if node.module.startswith("datasette_google_auth"):
-                assert node.module == "datasette_google_auth", node.module
+            if node.module.startswith("datasette_google_credentials"):
+                assert node.module == "datasette_google_credentials", node.module
                 imported |= {alias.name for alias in node.names}
         elif isinstance(node, ast.Import):
             assert not any(
-                a.name.startswith("datasette_google_auth") for a in node.names
+                a.name.startswith("datasette_google_credentials") for a in node.names
             )
-    assert imported <= set(datasette_google_auth.__all__)
+    assert imported <= set(datasette_google_credentials.__all__)
 
 
 # -------------------------------------------------------------- success
